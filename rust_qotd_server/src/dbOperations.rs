@@ -5,12 +5,13 @@ use std::net::TcpStream;
 use chrono::prelude::*;
 use crate::admCommands::AdmCommands;
 
-struct Quote {
+pub struct Quote {
     quote: String,
     author: String
 }
 
-pub fn serve_quote(stream: &mut TcpStream) {
+// TODO - memoize so we only need to call once per day
+pub fn serve_quote(stream: &mut TcpStream) -> Result<Quote, rusqlite::Error> {
     // gives us a quote. If no quotes avaliable, AND sqllite is empty,
     // serve the default quote.
     // otherwise, wrap around, get latest date quote, find offset from that date
@@ -21,6 +22,49 @@ pub fn serve_quote(stream: &mut TcpStream) {
         quote: dotenv::var("DEFAULT_QOTD").unwrap(),
         author: dotenv::var("DEFAULT_AUTH").unwrap()
     };
+
+    let conn =  match Connection::open("qotd.db") {
+        Ok(conn) => conn,
+        Err(err) =>  {
+            // TODO change all of these to eprintln
+            // TODO this should propogate to caller like ? does. 
+            eprintln!("Failed to open database: {}", err);
+            return Err(err)
+        }
+    };
+
+    let local: DateTime<Local> = Local::now();
+    let local_date = format!("{}{}{}", local.year(), local.month(), local.day());
+    let date_int = local_date.parse::<i32>().unwrap();
+
+    let sql = format!("select quote, author from qotd where returned_on = {}", date_int.to_string());
+
+    let mut quote_stmt = conn.prepare(&sql).unwrap();
+
+    let todays_quote_result: Result<Vec<(String, String)>, rusqlite::Error> = quote_stmt.query_map([],
+        |row| {
+            let quote: String = row.get(0)?;
+            let author: String = row.get(1)?;
+            Ok((quote, author)) // Return a tuple of (quote, author)
+        },
+    ).unwrap().collect(); // Collect the results into a Vec
+    
+    let todays_quote = match todays_quote_result {
+        Ok(quotes) if !quotes.is_empty() => {
+            let (quote, author) = quotes[0].clone(); 
+            Quote { 
+                quote:quote,
+                author:author
+            }
+        },
+        _ => {
+            eprintln!("No quote found for today.");
+            return Ok(default_quote)
+        }
+    };
+    
+    // ... use todays_quote ...
+    return Ok(todays_quote); // Return the tuple
 
     // todo: finish this! 
 
@@ -154,19 +198,3 @@ fn insert_into_db(quote: Quote) -> Result<(), String> {
     Ok(())
 
 }
-
-// startup db operation (create if not exists)
-
-// add quote
-
-// change default quote
-
-// change hosted ip, then restart server on that IP.
-
-// change pool 
-
-// change max req
-
-// change password
-
-// generic function to change env vars? 

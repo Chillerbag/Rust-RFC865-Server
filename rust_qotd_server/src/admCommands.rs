@@ -73,7 +73,8 @@ pub fn command_interpreter(commands: &String) {
         commands_to_parse.push(sanitised_command);
 
     }
-
+    
+    // TODO: Handle this
     dbOperations::exec_commands(&commands_to_parse);
     
 

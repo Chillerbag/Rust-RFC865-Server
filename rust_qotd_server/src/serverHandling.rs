@@ -101,7 +101,9 @@ pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
                         // writing is mutation.
 
                         // TODO: thread pool here.
-                        dbOperations::serve_quote(&mut stream);
+                        // more naughty unwraps!
+                        let quote: dbOperations::Quote = dbOperations::serve_quote(&mut stream).unwrap();
+
                     },
                     Ok(n) => {
                         // check for admin commands, on a new thread.
