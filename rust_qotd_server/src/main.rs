@@ -1,9 +1,7 @@
-
-use std::str;
-use std::net::{TcpListener};
-mod admCommands;
-mod serverHandling;
-mod dbOperations;
+use std::net::TcpListener;
+mod adm_commands;
+mod server_handling;
+mod db_operations;
 
 // functionality todos:
 // database operations
@@ -38,18 +36,12 @@ mod dbOperations;
     // 17.  When a datagram is received, an answering datagram is sent
     // containing a quote (the data in the received datagram is ignored).
 
-
-
-fn update_qotd(quote: &str) {
-    // update sqllite file with new qotd.
-}
-
 fn main() -> std::io::Result<()>{
 
     // ? propogates errors. returns err if fails, but unwraps if Ok()
     // TODO: on startup, take an IP
-    let tcp_listener: TcpListener = serverHandling::start_server()?;
-    serverHandling::conn_handler(&tcp_listener);
+    let tcp_listener: TcpListener = server_handling::start_server()?;
+    server_handling::conn_handler(&tcp_listener).unwrap();
 
     // implmenent
     // needs to listen for commands to update QOTD (and hence check for pw to do this, store PW in .env?)

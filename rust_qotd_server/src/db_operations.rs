@@ -1,17 +1,16 @@
 // functions for dealing with db, called from adminCommands
 // also called by serverHandling in the case of serveQuote.
 use rusqlite::{params, Connection, Result};
-use std::net::TcpStream;
 use chrono::prelude::*;
-use crate::admCommands::AdmCommands;
+use crate::adm_commands::AdmCommands;
 
 pub struct Quote {
-    quote: String,
-    author: String
+    pub quote: String,
+    pub author: String
 }
 
 // TODO - memoize so we only need to call once per day
-pub fn serve_quote(stream: &mut TcpStream) -> Result<Quote, rusqlite::Error> {
+pub fn serve_quote() -> Result<Quote, rusqlite::Error> {
     // gives us a quote. If no quotes avaliable, AND sqllite is empty,
     // serve the default quote.
     // otherwise, wrap around, get latest date quote, find offset from that date
@@ -119,6 +118,8 @@ pub fn exec_commands(commands: &Vec<AdmCommands>) -> Result<(), String> {
 
 // TODO probably shouldnt be using io Results here
 fn change_env_var(command: &AdmCommands) -> Result<(), String> {
+
+    // ok using .env was probably not smart. need to move to dotenvy.
 
 
     Ok(())

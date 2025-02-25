@@ -5,8 +5,8 @@ use std::thread;
 use dotenv::dotenv;
 // functions for the server
 
-use crate::admCommands;
-use crate::dbOperations;
+use crate::adm_commands;
+use crate::db_operations;
 
 const PORT: u32 = 17;
 
@@ -57,11 +57,11 @@ fn use_admin_thread(stream: Arc<Mutex<TcpStream>>, buffer: &mut [u8; 1024], buf_
 
         // lock the admin thread.
         // TODO: fix unwrap!
-        let mut is_active = adm_thread_status_clone.lock().unwrap();
+        let is_active = adm_thread_status_clone.lock().unwrap();
         
         // dereffing gives us access to inside the MutexGuard
         // first param ofthe mutexGuard is lifetime
-        if (*is_active) {
+        if *is_active {
             // lock method locks and gives access to TcpStream
             // TODO remove unwrap. 
             let mut unlocked_stream = stream.lock().unwrap();
@@ -71,7 +71,7 @@ fn use_admin_thread(stream: Arc<Mutex<TcpStream>>, buffer: &mut [u8; 1024], buf_
             }
             return;
         } else {
-            admCommands::command_interpreter(&raw_commands);
+            adm_commands::command_interpreter(&raw_commands);
         }
     });
 
@@ -102,8 +102,10 @@ pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
 
                         // TODO: thread pool here.
                         // more naughty unwraps!
-                        let quote: dbOperations::Quote = dbOperations::serve_quote(&mut stream).unwrap();
-
+                        let quote: db_operations::Quote = db_operations::serve_quote().unwrap();
+                        let quote_str = format!("{} - {}", quote.quote, quote.author);
+                        // todo - deal with unwrap
+                        stream.write_all(quote_str.as_bytes()).unwrap();
                     },
                     Ok(n) => {
                         // check for admin commands, on a new thread.
@@ -125,13 +127,6 @@ pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
             },
             Err(e) => println!("Error receiving stream: {}", e)
         }
-
-        // this is array syntax.
-
-
-        // if adm-pw sent in initial message, treat user as adm in seperate thread. 
-        // else, send the quote and close their connection.
-
     }
 
     Ok(())

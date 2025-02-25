@@ -1,5 +1,5 @@
 use regex::Regex;
-use crate::dbOperations;
+use crate::db_operations;
 pub enum AdmCommands {
     Password(Vec<String>),
     AddQuote(Vec<String>), 
@@ -75,7 +75,7 @@ pub fn command_interpreter(commands: &String) {
     }
     
     // TODO: Handle this
-    dbOperations::exec_commands(&commands_to_parse);
+    db_operations::exec_commands(&commands_to_parse);
     
 
 }
