@@ -20,12 +20,12 @@ pub fn start_server() ->  std::io::Result<TcpListener>{
         Ok(_) => println!("Loaded env vars successfully."),
         Err(e) => println!("Error loading env vars: {}", e)
     }
-    // get the sqllite file on startup, or make it. 
-    // also get the default_quote. 
+    // TODO get the sqllite file on startup, or make it. 
 
-    // TODO - does this mean that main needs to be in a while true loop?
+    // get IP.
+    let ip_raw = dotenv::var("SERVER_IP").unwrap();
 
-    let ip: String = format!("127.0.0.1:{}", PORT);
+    let ip: String = format!("{}:{}", ip_raw, PORT);
     let tcp_listener: TcpListener = TcpListener::bind(&ip)?;
     println!("Server is listening at: {}", ip);
     Ok(tcp_listener)
@@ -77,6 +77,7 @@ fn use_admin_thread(stream: Arc<Mutex<TcpStream>>, buffer: &mut [u8; 1024], buf_
 
 }
 
+// TODO: rate limit max client requests per hour
 pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
     // handle connections generically. if they send a command, do sumthin 
     // TODO, startup should take an IP to run on, right? 
@@ -98,6 +99,8 @@ pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
                 match stream.read(&mut buffer) {
                     Ok(n) if n == 0 => {
                         // writing is mutation.
+
+                        // TODO: thread pool here.
                         dbOperations::serve_quote(&mut stream);
                     },
                     Ok(n) => {

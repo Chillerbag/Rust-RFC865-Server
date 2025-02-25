@@ -5,6 +5,12 @@ mod admCommands;
 mod serverHandling;
 mod dbOperations;
 
+// functionality todos:
+// database operations
+// returning todays quote
+// rate limiting 
+// thread pooling for users
+
 
 // implementation notes: 
 // need to open port for listening for connections
