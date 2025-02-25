@@ -10,6 +10,8 @@ mod dbOperations;
 // returning todays quote
 // rate limiting 
 // thread pooling for users
+// shutdown command
+// reboot command? will this require shell escaping? 
 
 
 // implementation notes: 
