@@ -116,11 +116,36 @@ pub fn exec_commands(commands: &Vec<AdmCommands>) -> Result<(), String> {
     Ok(())
 }
 
-// TODO probably shouldnt be using io Results here
 fn change_env_var(command: &AdmCommands) -> Result<(), String> {
 
-    // ok using .env was probably not smart. need to move to dotenvy.
+    // ok using .env was probably not smart. need to move to something else.
+    // for time being, modify just for this session.
 
+    match command {
+        AdmCommands::ChangeDefault(new_quote) => {
+            // TODO. not great. Thread safety is important here.
+            unsafe { std::env::set_var("DEFAULT_QOTD", &new_quote[0]) };
+            unsafe { std::env::set_var("DEFAULT_QOTD_AUTH", &new_quote[1]) };
+        },
+        // TODO: probably make this not a vec. 
+        AdmCommands::ChangeIP(ip) => {
+            unsafe { std::env::set_var("SERVER_IP", &ip[0]) };
+        },
+        AdmCommands::ChangeMaxReq(reqnum) => {
+            // dont forget, all env vars are strings. need to handle these.
+            // TODO Don't unwrap!!!
+            unsafe { std::env::set_var("MAX_REQS_PER_HOUR", &reqnum[0]) };
+        },
+        AdmCommands::ChangePassword(newpw) => {
+            unsafe { std::env::set_var("ADM_PW", &newpw[0]) };
+        },
+        AdmCommands::ChangePool(poolval) => {
+            unsafe { std::env::set_var("POOL", &poolval[0]) };
+        }
+        AdmCommands::AddQuote(_) |
+        AdmCommands::Password(_) | 
+        AdmCommands::Unknown { .. } => ()
+    }
 
     Ok(())
 

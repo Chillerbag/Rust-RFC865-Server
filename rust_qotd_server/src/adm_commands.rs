@@ -75,7 +75,7 @@ pub fn command_interpreter(commands: &String) {
     }
     
     // TODO: Handle this
-    db_operations::exec_commands(&commands_to_parse);
+    let _ = db_operations::exec_commands(&commands_to_parse);
     
 
 }
