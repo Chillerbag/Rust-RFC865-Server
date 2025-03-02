@@ -9,7 +9,7 @@ use threadpool::ThreadPool;
 use crate::adm_commands;
 use crate::db_operations;
 
-const PORT: u32 = 9000;
+const PORT: u32 = 17;
 
 // <()> says it returns a result, but we dont care what. Either Ok or Error.
 // <(i32, String)> could be used for the normal wrapper. 
