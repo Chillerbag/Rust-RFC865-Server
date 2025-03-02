@@ -42,9 +42,9 @@ fn main() -> std::io::Result<()>{
     // ? propogates errors. returns err if fails, but unwraps if Ok()
     // TODO: on startup, take an IP
     let pool_size = dotenv::var("POOL")
-    .unwrap_or_else(|_| "4".to_string())
-    .parse::<usize>()
-    .unwrap_or(4);
+        .unwrap_or_else(|_| "4".to_string())
+        .parse::<usize>()
+        .unwrap_or(4);
 
     let pool = ThreadPool::new(pool_size); 
     let tcp_listener: TcpListener = server_handling::start_server()?;

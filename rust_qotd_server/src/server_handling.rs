@@ -9,7 +9,7 @@ use threadpool::ThreadPool;
 use crate::adm_commands;
 use crate::db_operations;
 
-const PORT: u32 = 17;
+const PORT: u32 = 9000;
 
 // <()> says it returns a result, but we dont care what. Either Ok or Error.
 // <(i32, String)> could be used for the normal wrapper. 
@@ -24,9 +24,17 @@ pub fn start_server() ->  std::io::Result<TcpListener>{
     // TODO get the sqllite file on startup, or make it. 
 
     // get IP.
-    let ip_raw = dotenv::var("SERVER_IP").unwrap();
+    let ip_raw: String = match dotenv::var("SERVER_IP") {
+        Ok(ipstr) => ipstr,
+        Err(e) => {
+            println!("Unable to load server IP {}", e);
+            "127.0.0.1".to_string()
+        }
+    };
 
     let ip: String = format!("{}:{}", ip_raw, PORT);
+    println!("IP set up: {}", ip);
+    // failing here
     let tcp_listener: TcpListener = TcpListener::bind(&ip)?;
     println!("Server is listening at: {}", ip);
     Ok(tcp_listener)
@@ -78,6 +86,17 @@ fn use_admin_thread(stream: Arc<Mutex<TcpStream>>, buffer: &mut [u8; 1024], buf_
 
 }
 
+fn is_admin_command(data: &[u8]) -> bool {
+    // Convert bytes to string, ignoring invalid UTF-8
+    if let Ok(command_str) = std::str::from_utf8(data) {
+        // Check if it starts with an admin command marker
+        // Adjust this logic based on your actual admin command format
+        command_str.trim().starts_with("pw:")
+    } else {
+        false
+    }
+}
+
 // TODO: rate limit max client requests per hour
 pub fn conn_handler(tcp: &TcpListener, pool: &ThreadPool) ->  std::io::Result<()>{
     // handle connections generically. if they send a command, do sumthin 
@@ -98,28 +117,30 @@ pub fn conn_handler(tcp: &TcpListener, pool: &ThreadPool) ->  std::io::Result<()
 
                 // TODO: read in whole stream. This is unreliable.
                 match stream.read(&mut buffer) {
-                    Ok(n) if n == 0 => {
-                        // writing is mutation.
-                        // todo, not sure if move is good here
-                        pool.execute(move || {
-                            // more naughty unwraps!
-                            let quote: db_operations::Quote = db_operations::serve_quote().unwrap();
-                            let quote_str = format!("{} - {}", quote.quote, quote.author);
-                            // todo - deal with unwrap
-                            stream.write_all(quote_str.as_bytes()).unwrap();
-                        });
-                    },
                     Ok(n) => {
-                        // check for admin commands, on a new thread.
-                        // admin code should be non blocking.
+                        if n > 0 && is_admin_command(&buffer[..n]) {
+                            // check for admin commands, on a new thread.
+                            // admin code should be non blocking.
 
-                        // wrap in an Arc Mutex to keep safe and lock stream.
-                        let stream = Arc::new(Mutex::new(stream));
+                            // wrap in an Arc Mutex to keep safe and lock stream.
+                            let stream = Arc::new(Mutex::new(stream));
 
-                        // clone for ref safety.
-                        let clone_stream = Arc::clone(&stream);
+                            // clone for ref safety.
+                            let clone_stream = Arc::clone(&stream);
 
-                        use_admin_thread(clone_stream, &mut buffer, &n);
+                            use_admin_thread(clone_stream, &mut buffer, &n);
+                        } else {
+                            // writing is mutation.
+                            // todo, not sure if move is good here
+                            pool.execute(move || {
+                                // more naughty unwraps!
+                                let quote: db_operations::Quote = db_operations::serve_quote().unwrap();
+                                let quote_str = format!("{} - {}", quote.quote, quote.author);
+                                // todo - deal with unwrap
+                                stream.write_all(quote_str.as_bytes()).unwrap();
+                                println!("Served client a quote");
+                            });
+                        }
                     },
                     Err(e) => println!("Error reading stream: {}", e)
                 }

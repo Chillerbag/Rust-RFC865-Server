@@ -19,7 +19,7 @@ pub fn serve_quote() -> Result<Quote, rusqlite::Error> {
     // TODO: dont unwrap! fix this.
     let default_quote = Quote {
         quote: dotenv::var("DEFAULT_QOTD").unwrap(),
-        author: dotenv::var("DEFAULT_AUTH").unwrap()
+        author: dotenv::var("DEFAULT_QOTD_AUTH").unwrap()
     };
 
     let conn =  match Connection::open("qotd.db") {
@@ -38,7 +38,14 @@ pub fn serve_quote() -> Result<Quote, rusqlite::Error> {
 
     let sql = format!("select quote, author from qotd where returned_on = {}", date_int.to_string());
 
-    let mut quote_stmt = conn.prepare(&sql).unwrap();
+    // TODO: this will panic if the table doesnt exist. If it doesm serve the default quote.
+    let mut quote_stmt = match conn.prepare(&sql) {
+        Ok(stmt) => stmt,
+        Err(e) => {
+            eprintln!("Table doesnt exist yet in db: {}", e);
+            return Ok(default_quote)
+        }
+    };
 
     let todays_quote_result: Result<Vec<(String, String)>, rusqlite::Error> = quote_stmt.query_map([],
         |row| {
@@ -216,7 +223,7 @@ fn insert_into_db(quote: Quote) -> Result<(), String> {
 
     // todo this is a result, deal with it
     conn.execute(
-        "INSERT INTO qotd (quote, author, date) values (?1, ?2, ?3)",
+        "INSERT INTO qotd (quote, author, returned_on) values (?1, ?2, ?3)",
         params![quote.quote, quote.author, max_date],
     ).unwrap();
 
