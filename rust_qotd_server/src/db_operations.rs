@@ -116,6 +116,7 @@ pub fn exec_commands(commands: &Vec<AdmCommands>) -> Result<(), String> {
     Ok(())
 }
 
+// This is really bad. lets fix this later.
 fn change_env_var(command: &AdmCommands) -> Result<(), String> {
 
     // ok using .env was probably not smart. need to move to something else.

@@ -2,6 +2,7 @@ use std::net::TcpListener;
 mod adm_commands;
 mod server_handling;
 mod db_operations;
+use threadpool::ThreadPool;
 
 // functionality todos:
 // database operations
@@ -40,8 +41,14 @@ fn main() -> std::io::Result<()>{
 
     // ? propogates errors. returns err if fails, but unwraps if Ok()
     // TODO: on startup, take an IP
+    let pool_size = dotenv::var("POOL")
+    .unwrap_or_else(|_| "4".to_string())
+    .parse::<usize>()
+    .unwrap_or(4);
+
+    let pool = ThreadPool::new(pool_size); 
     let tcp_listener: TcpListener = server_handling::start_server()?;
-    server_handling::conn_handler(&tcp_listener).unwrap();
+    server_handling::conn_handler(&tcp_listener, &pool).unwrap();
 
     // implmenent
     // needs to listen for commands to update QOTD (and hence check for pw to do this, store PW in .env?)

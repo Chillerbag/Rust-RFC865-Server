@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::io::{Write, Read};
 use std::thread;
 use dotenv::dotenv;
+use threadpool::ThreadPool;
 // functions for the server
 
 use crate::adm_commands;
@@ -78,7 +79,7 @@ fn use_admin_thread(stream: Arc<Mutex<TcpStream>>, buffer: &mut [u8; 1024], buf_
 }
 
 // TODO: rate limit max client requests per hour
-pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
+pub fn conn_handler(tcp: &TcpListener, pool: &ThreadPool) ->  std::io::Result<()>{
     // handle connections generically. if they send a command, do sumthin 
     // TODO, startup should take an IP to run on, right? 
     // ? propogates errors. returns err if fails, but unwraps if Ok()
@@ -99,13 +100,14 @@ pub fn conn_handler(tcp: &TcpListener) ->  std::io::Result<()>{
                 match stream.read(&mut buffer) {
                     Ok(n) if n == 0 => {
                         // writing is mutation.
-
-                        // TODO: thread pool here.
-                        // more naughty unwraps!
-                        let quote: db_operations::Quote = db_operations::serve_quote().unwrap();
-                        let quote_str = format!("{} - {}", quote.quote, quote.author);
-                        // todo - deal with unwrap
-                        stream.write_all(quote_str.as_bytes()).unwrap();
+                        // todo, not sure if move is good here
+                        pool.execute(move || {
+                            // more naughty unwraps!
+                            let quote: db_operations::Quote = db_operations::serve_quote().unwrap();
+                            let quote_str = format!("{} - {}", quote.quote, quote.author);
+                            // todo - deal with unwrap
+                            stream.write_all(quote_str.as_bytes()).unwrap();
+                        });
                     },
                     Ok(n) => {
                         // check for admin commands, on a new thread.
