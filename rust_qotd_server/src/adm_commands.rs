@@ -9,8 +9,8 @@ pub enum AdmCommands {
     ChangeMaxReq(Vec<String>),
     ChangePassword(Vec<String>),
     Unknown {
-        command: String,
-        args: Vec<String>
+        _command: String,
+        _args: Vec<String>
     }
 }
 
@@ -29,8 +29,8 @@ impl From<(String, Vec<String>)> for AdmCommands {
             "changemaxreq" => Self::ChangeMaxReq(args),
             "changepassword" => Self::ChangePassword(args),
             _ => Self::Unknown {
-                command,
-                args
+                _command: command,
+                _args: args
             }
         }
     }
