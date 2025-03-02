@@ -5,12 +5,17 @@ mod db_operations;
 use threadpool::ThreadPool;
 
 // functionality todos:
-// database operations
-// returning todays quote
-// rate limiting 
-// thread pooling for users
-// shutdown command
-// reboot command? will this require shell escaping? 
+    // rate limiting 
+    // shutdown command
+    // reboot command? will this require shell escaping? 
+    // fix http headers
+    // fix table creation
+    // fix port num 
+    // fix adm commands
+
+// bugs:
+// WTF is happening with netcat when trying to get a quote? curl works fine
+// close stream on adm command end! 
 
 
 // implementation notes: 
@@ -49,12 +54,6 @@ fn main() -> std::io::Result<()>{
     let pool = ThreadPool::new(pool_size); 
     let tcp_listener: TcpListener = server_handling::start_server()?;
     server_handling::conn_handler(&tcp_listener, &pool).unwrap();
-
-    // implmenent
-    // needs to listen for commands to update QOTD (and hence check for pw to do this, store PW in .env?)
-    // needs to respond to reqs with no command.
-
-    // we dont want the function to have ownership.
 
     Ok(())
 }

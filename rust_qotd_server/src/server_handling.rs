@@ -80,7 +80,8 @@ fn use_admin_thread(stream: Arc<Mutex<TcpStream>>, buffer: &mut [u8; 1024], buf_
             }
             return;
         } else {
-            adm_commands::command_interpreter(&raw_commands);
+            // fix errors or change this
+            adm_commands::command_interpreter(&raw_commands).unwrap();
         }
     });
 
@@ -91,7 +92,7 @@ fn is_admin_command(data: &[u8]) -> bool {
     if let Ok(command_str) = std::str::from_utf8(data) {
         // Check if it starts with an admin command marker
         // Adjust this logic based on your actual admin command format
-        command_str.trim().starts_with("pw:")
+        command_str.trim().starts_with("pw")
     } else {
         false
     }
@@ -114,11 +115,16 @@ pub fn conn_handler(tcp: &TcpListener, pool: &ThreadPool) ->  std::io::Result<()
                 // do we handle that result somehow? What does it do? output to stderr?
                 println!("Connection from: {}", stream.peer_addr()?);
                 let mut buffer = [0; 1024];
+                let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(2)));
 
                 // TODO: read in whole stream. This is unreliable.
                 match stream.read(&mut buffer) {
                     Ok(n) => {
+                        if n == 0 {
+                            println!("No data sent. bug!")
+                        }
                         if n > 0 && is_admin_command(&buffer[..n]) {
+                            println!("Admin command detected.");
                             // check for admin commands, on a new thread.
                             // admin code should be non blocking.
 
@@ -138,11 +144,17 @@ pub fn conn_handler(tcp: &TcpListener, pool: &ThreadPool) ->  std::io::Result<()
                                 let quote_str = format!("{} - {}", quote.quote, quote.author);
                                 // todo - deal with unwrap
                                 stream.write_all(quote_str.as_bytes()).unwrap();
+                                let _ = stream.flush();
+                                let _ = stream.shutdown(std::net::Shutdown::Both);
                                 println!("Served client a quote");
                             });
                         }
                     },
-                    Err(e) => println!("Error reading stream: {}", e)
+                    Err(e) => { 
+                        let _ = stream.flush();
+                        let _ = stream.shutdown(std::net::Shutdown::Both);
+                        println!("Error reading stream: {}", e)
+                    }
                 }
                 
 

@@ -37,7 +37,7 @@ impl From<(String, Vec<String>)> for AdmCommands {
 }
 
 
-pub fn command_interpreter(commands: &String) {
+pub fn command_interpreter(commands: &String) -> Result<(), String> {
 
     // interpret commands sent in stream
     // auto derefernce!
@@ -51,24 +51,37 @@ pub fn command_interpreter(commands: &String) {
     let mut commands_to_parse: Vec<AdmCommands> = vec![];
 
     for raw_command in comm_iter {
-        let full_command: Vec<&str> = raw_command.split(":").collect();
+
+        // skip empty commands. accidental space etc. 
+        if raw_command.trim().is_empty() {
+            continue
+        }
+        // ensures we dont accidentally split when we get : in a quote.
+        let parts: Vec<&str> = raw_command.splitn(2, ":").collect();
         // now, we have the command, and a undealt with string of args:
         // [com (str), args (str)]
         // pattern  match dbl quotes to turn args into Vec<String>
 
+        if parts.len() < 2 {
+            return Err(format!("Malformed command missing colon: {}", raw_command))
+        }
+
+        let command = parts[0].trim().to_owned();
+        let args_str = parts[1];
+
         // this is funky, this is the only way rust supports "" in the pattern
-        let re = match Regex::new(r#""(\S*)""#) {
+        let re = match Regex::new(r#""([^"\\]*(?:\\.[^"\\]*)*)""#) {
             Ok(re) => re,
             Err(e) => {
-                println!("Error loading Regex: {}", e);
-                // TODO, what should we do here? 
-                panic!("Panicked: Failed to compile regex");
+                return Err(format!("Error loading Regex: {}", e));
             }
         };
 
         // get args from string
-        let args: Vec<String> = re.find_iter(full_command[1]).map(|m| m.as_str().to_owned()).collect();
-        let command: String = full_command[0].to_owned();
+        let args: Vec<String> = re
+            .captures_iter(args_str)
+            .map(|cap| cap[1].to_owned())
+            .collect();
 
         let sanitised_command = AdmCommands::from((command, args));
 
@@ -78,6 +91,7 @@ pub fn command_interpreter(commands: &String) {
     
     // TODO: Handle this
     let _ = db_operations::exec_commands(&commands_to_parse);
+    Ok(())
     
 
 }
