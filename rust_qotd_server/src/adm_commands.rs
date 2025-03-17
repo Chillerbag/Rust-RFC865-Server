@@ -15,7 +15,6 @@ pub enum AdmCommands {
 }
 
 // TODO: need to write errors to the stream. 
-
 // impl syntax is cool! adds a func binding on this enum
 impl From<(String, Vec<String>)> for AdmCommands {
     fn from((command, args): (String, Vec<String>)) -> Self {
@@ -35,7 +34,6 @@ impl From<(String, Vec<String>)> for AdmCommands {
         }
     }
 }
-
 
 pub fn command_interpreter(commands: &String) -> Result<(), String> {
 

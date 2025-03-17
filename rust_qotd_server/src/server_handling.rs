@@ -5,15 +5,10 @@ use std::thread;
 use dotenv::dotenv;
 use threadpool::ThreadPool;
 // functions for the server
-
 use crate::adm_commands;
 use crate::db_operations;
 
 const PORT: u32 = 17;
-
-// <()> says it returns a result, but we dont care what. Either Ok or Error.
-// <(i32, String)> could be used for the normal wrapper. 
-// I think? 
 
 // note, the <TcpListner> is shorthand for <TcpListner, Std::io::Error> 
 pub fn start_server() ->  std::io::Result<TcpListener>{
@@ -21,8 +16,6 @@ pub fn start_server() ->  std::io::Result<TcpListener>{
         Ok(_) => println!("Loaded env vars successfully."),
         Err(e) => println!("Error loading env vars: {}", e)
     }
-    // TODO get the sqllite file on startup, or make it. 
-
     // get IP.
     let ip_raw: String = match dotenv::var("SERVER_IP") {
         Ok(ipstr) => ipstr,
@@ -139,14 +132,34 @@ pub fn conn_handler(tcp: &TcpListener, pool: &ThreadPool) ->  std::io::Result<()
                             // writing is mutation.
                             // todo, not sure if move is good here
                             pool.execute(move || {
-                                // more naughty unwraps!
-                                let quote: db_operations::Quote = db_operations::serve_quote().unwrap();
+                                let quote: db_operations::Quote = match db_operations::serve_quote() {
+                                    Ok(quote) => quote,
+                                    Err(e) => {
+                                        eprintln!("Error serving quote: {:?}", e);
+                                        db_operations::Quote {
+                                            quote: "The server encountered an error, but errors are just opportunities in disguise.".to_string(),
+                                            author: "Error Handler".to_string(),
+                                        }
+                                    }
+                                };
                                 let quote_str = format!("{} - {}", quote.quote, quote.author);
-                                // todo - deal with unwrap
-                                stream.write_all(quote_str.as_bytes()).unwrap();
-                                let _ = stream.flush();
-                                let _ = stream.shutdown(std::net::Shutdown::Both);
-                                println!("Served client a quote");
+                                match stream.write_all(quote_str.as_bytes()) {
+                                    Ok(_) => {
+                                        // Write succeeded, proceed with flush and shutdown
+                                        if let Err(e) = stream.flush() {
+                                            eprintln!("Error flushing stream: {}", e);
+                                        }
+                                        if let Err(e) = stream.shutdown(std::net::Shutdown::Both) {
+                                            eprintln!("Error shutting down stream: {}", e);
+                                        }
+                                        println!("Served client a quote");
+                                    },
+                                    Err(e) => {
+                                        eprintln!("Failed to write to stream: {}", e);
+                                        // Attempt to shutdown the connection anyway
+                                        let _ = stream.shutdown(std::net::Shutdown::Both);
+                                    }
+                                }
                             });
                         }
                     },

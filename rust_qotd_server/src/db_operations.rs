@@ -18,8 +18,14 @@ pub fn serve_quote() -> Result<Quote, rusqlite::Error> {
 
     // TODO: dont unwrap! fix this.
     let default_quote = Quote {
-        quote: dotenv::var("DEFAULT_QOTD").unwrap(),
-        author: dotenv::var("DEFAULT_QOTD_AUTH").unwrap()
+        quote: dotenv::var("DEFAULT_QOTD").unwrap_or_else(|_| {
+            eprintln!("WARNING: DEFAULT_QOTD environment variable not found, using fallback quote");
+            "The server encountered an error, but errors are just opportunities in disguise.".to_string()
+        }),
+        author: dotenv::var("DEFAULT_QOTD_AUTH").unwrap_or_else(|_| {
+            eprintln!("WARNING: DEFAULT_QOTD_AUTH environment variable not found, using fallback author");
+            "Error Handler".to_string()
+        })
     };
 
     let conn =  match Connection::open("qotd.db") {
@@ -141,7 +147,6 @@ fn change_env_var(command: &AdmCommands) -> Result<(), String> {
         },
         AdmCommands::ChangeMaxReq(reqnum) => {
             // dont forget, all env vars are strings. need to handle these.
-            // TODO Don't unwrap!!!
             unsafe { std::env::set_var("MAX_REQS_PER_HOUR", &reqnum[0]) };
         },
         AdmCommands::ChangePassword(newpw) => {

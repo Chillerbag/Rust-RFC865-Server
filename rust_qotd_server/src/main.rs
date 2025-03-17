@@ -8,26 +8,6 @@ use threadpool::ThreadPool;
     // rate limiting 
     // shutdown command
     // reboot command? will this require shell escaping? 
-    // fix http headers
-    // fix table creation
-    // fix port num 
-    // fix adm commands
-
-// bugs:
-// WTF is happening with netcat when trying to get a quote? curl works fine
-// close stream on adm command end! 
-
-
-// implementation notes: 
-// need to open port for listening for connections
-// need to write a start_server() function that gets the QOTD or makes the DB and returns err if no quotes avaliable.
-// need a function to check QOTD status - how many quotes avaliable. 
-// need a failsafe - send a default quote if no quotes today. 
-// need a option to send update to default quote (and hence a general way of interpreting commands to the server.)
-// tcp: on connection - send data and close
-// udp: client sends datagram to port. On datagram receive - send quote.
-// need a function to insert QOTDs into the sqllite file 
-// need to rate limit IPs. Memoizable? 
 
 // RFC: 865
 // TCP:
@@ -47,6 +27,7 @@ fn main() -> std::io::Result<()>{
     // ? propogates errors. returns err if fails, but unwraps if Ok()
     // TODO: on startup, take an IP
     let pool_size = dotenv::var("POOL")
+        // Use a thread pool of 4 as a fallback if fails. 
         .unwrap_or_else(|_| "4".to_string())
         .parse::<usize>()
         .unwrap_or(4);
